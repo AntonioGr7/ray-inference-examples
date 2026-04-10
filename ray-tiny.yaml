@@ -1,0 +1,50 @@
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: llm-toy-cluster
+spec:
+  serveConfigV2: |
+    applications:
+      - name: llm-app
+        route_prefix: "/""
+        import_path: llm_app_ingress:llm_app
+
+  rayClusterConfig:
+    rayVersion: '2.46.0'
+    headGroupSpec:
+      template:
+        spec:
+          containers:
+          - name: ray-head
+            image: "ray-llm-local:latest"
+            imagePullPolicy: Never
+            resources:
+              #requests: { cpu: "2" }
+              limits: { cpu: "1" }
+
+    workerGroupSpecs:
+    - groupName: rtx2050-worker-group
+      replicas: 1
+      rayStartParams:
+        num-gpus: "1"
+      minReplicas: 1
+      maxReplicas: 1
+      template:
+        spec:
+          tolerations:
+          - key: "nvidia.com/gpu"
+            operator: "Equal"
+            value: "present"
+            effect: "NoSchedule"
+          containers:
+          - name: ray-worker
+            image: "ray-llm-local:latest"
+            # AND ADD THIS LINE
+            imagePullPolicy: Never
+            resources:
+              limits:
+                nvidia.com/gpu: "1"
+                cpu: "1"
+              requests:
+                nvidia.com/gpu: "1"
+                cpu: "1"
